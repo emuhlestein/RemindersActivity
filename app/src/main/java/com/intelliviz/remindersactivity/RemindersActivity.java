@@ -1,15 +1,20 @@
 package com.intelliviz.remindersactivity;
 
 import android.app.Activity;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
+
+import java.sql.SQLDataException;
 
 public class RemindersActivity extends Activity {
 
     private ListView mListView;
+    private RemindersDbAdapter mDbAdapter;
+    private RemindersSimpleCursorAdapter mCursorAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -17,15 +22,33 @@ public class RemindersActivity extends Activity {
         setContentView(R.layout.activity_reminders);
 
         mListView = (ListView)findViewById(R.id.reminders_list_view);
-        // The ArrayAdapter is the controller in our model-view-controller
-        // relationship. (controller)
-        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(
-                this, // context
-                R.layout.reminders_row, // layout (View)
-                R.id.row_text, // (view)
-                // data (model) test data to test listview
-                new String[]{"First record", "second record", "third record"});
-        mListView.setAdapter(arrayAdapter);
+        mListView.setDivider(null);
+        mDbAdapter = new RemindersDbAdapter(this);
+        try {
+            mDbAdapter.open();
+        } catch (SQLDataException e) {
+            e.printStackTrace();
+        }
+
+        Cursor cursor = mDbAdapter.fetchAllReminders();
+
+        String[] from = new String[] {
+                RemindersDbAdapter.COL_CONTENT
+        };
+
+        int[] to = new int[] {
+                R.id.row_text
+        };
+
+        mCursorAdapter = new RemindersSimpleCursorAdapter(
+                RemindersActivity.this,
+                R.layout.reminders_row,
+                cursor,
+                from,
+                to,
+                0);
+
+        mListView.setAdapter(mCursorAdapter);
     }
 
     @Override
@@ -37,16 +60,16 @@ public class RemindersActivity extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch(item.getItemId()) {
+            case R.id.action_new:
+                // create new reminder
+                Log.d(getLocalClassName(), "Create new reminder");
+                return true;
+            case R.id.action_exit:
+                finish();
+                return true;
+            default:
+                return false;
         }
-
-        return super.onOptionsItemSelected(item);
     }
 }
